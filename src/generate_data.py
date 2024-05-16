@@ -8,10 +8,6 @@ import copy
 from copy import deepcopy
 import pickle
 
-def run_opf(network):
-    pp.runopp(network, verbose=False, numba=False)  # Run the optimal power flow
-    return network.res_bus, network.res_line
-
 def save_data(data):
     with open('data/successful_nets.pkl', 'wb') as f:
             pickle.dump(data, f)
@@ -19,7 +15,6 @@ def save_data(data):
 
 def matrix_rank(switch_matrix, incidence_matrix):
     total_nodes = len(net.bus.index)
-
     # Calculate incidence matrix - switch Matrix dot product
     AS_matrix = np.dot(incidence_matrix, switch_matrix)
     # Calculate rank of the matrix
@@ -56,7 +51,7 @@ def plot_graph_network(net):
     # else:
     #     pos = nx.spring_layout(graph, scale=2.0, center=(0.5, 0.5))  # Adjust scale and center as needed
  
-    nx.draw_networkx(graph, pos, with_labels=True, node_color='skyblue', node_size=300, font_size=8, font_color='darkred')
+    nx.draw_networkx(graph, pos, with_labels=True, node_color='black', node_size=300, font_size=8, font_color='white')
     plt.title(f'33 bus system (Network {len(successful_nets)})')
     plt.savefig(f'plots/Network_{len(successful_nets)}', dpi=300)
     plt.show()
@@ -68,22 +63,18 @@ def incidence_matrix(net):
     new_net.line.loc[mask, 'in_service'] = True
     lines = new_net.line
     nodes = new_net.bus.index
-    
     # Initialize adjacency matrix with zeros
     incidence_matrix = np.zeros((len(nodes), len(lines)))
-
     # Add edges from the lines in the network
     for idx, line in net.line.iterrows():
         incidence_matrix[line.from_bus, idx] = -1
         incidence_matrix[line.to_bus, idx] = 1
-
     return incidence_matrix
 
 def service_matrix(net):
     switch_matrix = np.zeros((len(net.line), len(net.line)))
     in_service = net.line['in_service']
     np.fill_diagonal(switch_matrix, in_service)
-
     return switch_matrix
 
 def new_network_configuration(net):
@@ -91,14 +82,17 @@ def new_network_configuration(net):
     mask = ~net.line['in_service']
     net.line.loc[mask, 'in_service'] = True
     net.line.loc[selected_nodes, 'in_service'] = False
-    
     return net
 
 if __name__ == '__main__':
+    # Initialize script
     net = nw.case33bw()
     switch_matrix = service_matrix(net)
     incidence_matrix = incidence_matrix(net)
     successful_nets = []
+
+    # Load file with load factors per season
+    load_factors = pd.read_csv('data/load_seasons.csv')
 
     while len(successful_nets) < 10:
         try: 
