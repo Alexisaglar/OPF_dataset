@@ -5,17 +5,17 @@ import pandapower.networks as nw
 import networkx as nx
 import matplotlib.pyplot as plt
 import copy
+from copy import deepcopy
+import pickle
 
 def run_opf(network):
     pp.runopp(network, verbose=False, numba=False)  # Run the optimal power flow
     return network.res_bus, network.res_line
 
-def save_data(bus_data, line_data):
-    # data = np.hstack((bus_data.to_numpy(), line_data.to_numpy()))
-    # data.tonumpy()
-    # data.save('dataset_33bus')
-    return
-
+def save_data(data):
+    with open('data/successful_nets.pkl', 'wb') as f:
+            pickle.dump(data, f)
+    print(f"Saved {len(successful_nets)} successful configurations.")
 
 def matrix_rank(switch_matrix, incidence_matrix):
     total_nodes = len(net.bus.index)
@@ -24,7 +24,7 @@ def matrix_rank(switch_matrix, incidence_matrix):
     AS_matrix = np.dot(incidence_matrix, switch_matrix)
     # Calculate rank of the matrix
     rank = np.linalg.matrix_rank(AS_matrix)
-    print(rank)
+    # print(rank)
     if rank == total_nodes - 1:
         print('All nodes are connected')
         return True
@@ -45,11 +45,20 @@ def matrix_trace(switch_matrix):
 
 
 def plot_graph_network(net):
-    # pos = nx.spring_layout(graph)  # positions for all nodes
     graph = pp.topology.create_nxgraph(net)
     pos = nx.spring_layout(graph, k=1, iterations=1000)  # Increase k for more spread
-    nx.draw_networkx(graph, pos, with_labels=True, node_color='skyblue', node_size=700, font_size=8, font_color='darkred')
-    plt.title('33 bus network')
+    plt.figure(figsize=(10, 6))  # Width, height in inches
+
+    # Check if the geodata DataFrame exists and contains x, y coordinates
+    # if 'bus_geodata' in net and 'x' in net.bus_geodata and 'y' in net.bus_geodata:
+    #     # Scale and adjust positions to make them more spread out and structured
+    #     pos = {bus: (x * 3, y * 3) for bus, x, y in zip(net.bus_geodata.index, net.bus_geodata.x, net.bus_geodata.y)}
+    # else:
+    #     pos = nx.spring_layout(graph, scale=2.0, center=(0.5, 0.5))  # Adjust scale and center as needed
+ 
+    nx.draw_networkx(graph, pos, with_labels=True, node_color='skyblue', node_size=300, font_size=8, font_color='darkred')
+    plt.title(f'33 bus system (Network {len(successful_nets)})')
+    plt.savefig(f'plots/Network_{len(successful_nets)}', dpi=300)
     plt.show()
     return
 
@@ -89,11 +98,25 @@ if __name__ == '__main__':
     net = nw.case33bw()
     switch_matrix = service_matrix(net)
     incidence_matrix = incidence_matrix(net)
-    for i in range(1000):
-        net = new_network_configuration(net)
-        print(net.line['in_service'])
-        switch_matrix = service_matrix(net)
-        if matrix_rank(switch_matrix, incidence_matrix):
-            if matrix_trace(switch_matrix):
-                plot_graph_network(net)
-        
+    successful_nets = []
+
+    while len(successful_nets) < 10:
+        try: 
+            net = new_network_configuration(net)
+            switch_matrix = service_matrix(net)
+            if matrix_rank(switch_matrix, incidence_matrix) and matrix_trace(switch_matrix):
+                pp.runpp(net, verbose=False, numba=False)
+            else:
+                print("Criteria for radial network and convergence not met.")
+                continue  # Skip the rest of the loop and proceed with the next iteration
+
+        except pp.LoadflowNotConverged:
+            print('Load flow did NOT converge.')
+
+        else:
+            successful_nets.append(deepcopy(net))
+            plot_graph_network(net)
+            print('Load flow converged')
+
+    save_data(successful_nets)
+
