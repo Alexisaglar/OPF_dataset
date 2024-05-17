@@ -66,7 +66,7 @@ smoothed_total_energy_consumption = average_profile.rolling(
 
 # Step 5: Calculate the seasonal adjustments
 autumn_adjustment = smoothed_total_energy_consumption * 0.80
-winter_adjustment = smoothed_total_energy_consumption * 1
+winter_adjustment = smoothed_total_energy_consumption 
 spring_adjustment = smoothed_total_energy_consumption * 0.85
 summer_adjustment = smoothed_total_energy_consumption * 0.65
 
@@ -86,7 +86,7 @@ plt.rc("font", family="Arial")
 # Plotting the seasonal adjustments
 winter_adjustment.plot(label="Winter", lw=2)
 autumn_adjustment.plot(label="Autumn", lw=2)
-smoothed_total_energy_consumption.plot(label="Summer", lw=2)
+summer_adjustment.plot(label="Summer", lw=2)
 spring_adjustment.plot(label="Spring", lw=2)
 plt.xticks([])
 
