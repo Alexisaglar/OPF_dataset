@@ -9,6 +9,7 @@ import h5py
 
 # Constants
 NUM_NETWORKS_TO_SIMULATE = 10
+data = 'data/load_seasons.csv'
 
 class PowerFlowSimulator:
     def __init__(self, net, load_file):
@@ -51,7 +52,6 @@ class PowerFlowSimulator:
         self.net.line['in_service'] = True
         selected_lines = np.random.choice(self.net.line.index, size=5, replace=False)
         self.net.line.loc[selected_lines, 'in_service'] = False
-        # print(self.net.line['in_service'])
 
     def run_simulation(self):
         incidence_matrix = self.calculate_incidence_matrix()
@@ -81,7 +81,6 @@ class PowerFlowSimulator:
                 self.reset_and_apply_loads(time_step, season)
                 try:
                     pp.runpp(self.net, verbose=True, numba=False)
-                    # time_step_results[time_step] = deepcopy(self.net.res_bus)  # Saving results for each timestep
                     results = {
                         'res_bus': deepcopy(self.net.res_bus.values),
                         'res_line': deepcopy(self.net.res_line.values)
@@ -112,7 +111,6 @@ class PowerFlowSimulator:
         nx.draw_networkx(graph, pos, with_labels=True, node_color='black', node_size=300, font_color='white')
         plt.title(f'Power Network Topology - Configuration {config_number}')
         plt.savefig(f'plots/Network_{config_number}', dpi=300)
-        # plt.show()
 
     def save_results(self):
         with h5py.File('data/network_results.h5', 'w') as f:
@@ -126,13 +124,10 @@ class PowerFlowSimulator:
                         time_step_group.create_dataset('res_bus', data=results['res_bus'])
                         # Save line results
                         time_step_group.create_dataset('res_line', data=results['res_line'])
-                        # Additional data can be saved similarly
 
 if __name__ == '__main__':
     network = nw.case33bw()
-    simulator = PowerFlowSimulator(network, 'data/load_seasons.csv')
+    simulator = PowerFlowSimulator(network, data)
     simulator.run_simulation()
     if simulator.successful_nets:
         simulator.save_results()
-        # simulator.plot_network()
-
