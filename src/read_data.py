@@ -1,31 +1,18 @@
 import h5py
 
-def inspect_hdf5_file(file_path):
-    with h5py.File(file_path, 'r') as file:
-        # Iterate over each network configuration
-        for net_key in file.keys():
-            print(f"Network Configuration: {net_key}")
-            net_group = file[net_key]
+def read_results(network_id, season, time_step):
+    with h5py.File('data/network_results.h5', 'r') as f:
+        static_data = {
+            'line': f[f'network_{network_id}/network_config/line'][:],
+            'bus': f[f'network_{network_id}/network_config/bus'][:]
+        }
+        dynamic_data = {
+            'res_bus': f[f'network_{network_id}/season_{season}/time_step_{time_step}/res_bus'][:],
+            'res_line': f[f'network_{network_id}/season_{season}/time_step_{time_step}/res_line'][:]
+        }
+        return static_data, dynamic_data
 
-            # Iterate over each season within a network configuration
-            for season_key in net_group.keys():
-                print(f"  Season: {season_key}")
-                season_group = net_group[season_key]
-
-                # Iterate over each time step within a season
-                for time_step_key in season_group.keys():
-                    print(f"    Time Step: {time_step_key}")
-                    time_step_group = season_group[time_step_key]
-
-                    # Display datasets and their shapes within this time step
-                    for dataset_name in time_step_group.keys():
-                        dataset = time_step_group[dataset_name]
-                        print(f"      Dataset: {dataset_name}, Shape: {dataset.shape}, Data Type: {dataset.dtype}")
-
-def main():
-    file_path = 'data/network_results.h5'  # Adjust the path as needed
-    inspect_hdf5_file(file_path)  # Correctly calling the defined function
-
-if __name__ == '__main__':
-    main()
-
+# Example of reading the results for network 1, summer season, and time step 0
+static, dynamic = read_results(1, 'summer', 0)
+print("Static Data:", static)
+print("Dynamic Data:", dynamic)

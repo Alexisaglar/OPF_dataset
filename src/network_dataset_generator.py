@@ -74,18 +74,26 @@ class PowerFlowSimulator:
             attempts += 1
 
     def simulate_loads(self):
-        seasonal_results = {}
+        # Drop the desired column from the DataFrames before saving
+        line_data = self.net.line.drop(columns=['type'])
+        bus_data = self.net.bus.drop(columns=['type'])
+
+        seasonal_results = {'network_config': {
+            'line': deepcopy(line_data.values.astype(float)),
+            'bus': deepcopy(bus_data.values.astype(float))
+        }}
+
         for season in self.load_factors.columns:
             time_step_results = {}
             for time_step in range(self.load_factors.shape[0]):
                 self.reset_and_apply_loads(time_step, season)
                 try:
                     pp.runpp(self.net, verbose=True, numba=False)
-                    results = {
+                    lfa_results = {
                         'res_bus': deepcopy(self.net.res_bus.values),
-                        'res_line': deepcopy(self.net.res_line.values)
+                        'res_line': deepcopy(self.net.res_line.values),
                     }
-                    time_step_results[time_step] = results
+                    time_step_results[time_step] = lfa_results
                 except pp.LoadflowNotConverged:
                     print(f'Load flow did not converge for time step {time_step}, season {season}.')
                     return None  # Terminate and return None to indicate failure
@@ -114,15 +122,19 @@ class PowerFlowSimulator:
 
     def save_results(self):
         with h5py.File('data/network_results.h5', 'w') as f:
-            for i, net_data in self.all_results.items():
-                net_group = f.create_group(f'net_{i}')
+            for net_id, net_data in self.all_results.items():
+                net_group = f.create_group(f'network_{net_id}')
+                static_group = net_group.create_group('network_config')
+                static_group.create_dataset('line', data=net_data['network_config']['line'])
+                static_group.create_dataset('bus', data=net_data['network_config']['bus'])
+                
                 for season, time_step_data in net_data.items():
+                    if season == 'network_config':
+                        continue
                     season_group = net_group.create_group(f'season_{season}')
                     for time_step, results in time_step_data.items():
                         time_step_group = season_group.create_group(f'time_step_{time_step}')
-                        # Save bus results
                         time_step_group.create_dataset('res_bus', data=results['res_bus'])
-                        # Save line results
                         time_step_group.create_dataset('res_line', data=results['res_line'])
 
 if __name__ == '__main__':
