@@ -74,13 +74,15 @@ class PowerFlowSimulator:
             attempts += 1
 
     def simulate_loads(self):
-        # Drop the desired column from the DataFrames before saving
-        line_data = self.net.line.drop(columns=['type'])
-        bus_data = self.net.bus.drop(columns=['type'])
+        # Drop not in service lines and not neccesary columns
+        line_data = self.net.line[['from_bus', 'to_bus', 'length_km', 'r_ohm_per_km', 'x_ohm_per_km']]
+        bus_data = self.net.bus[['vn_kv', 'max_vm_pu', 'min_vm_pu']]
 
+        # Save network configuration data
         seasonal_results = {'network_config': {
-            'line': deepcopy(line_data.values.astype(float)),
-            'bus': deepcopy(bus_data.values.astype(float))
+            # 'line': deepcopy(line_data.values.astype(float)),
+            'line': deepcopy(line_data[self.net.line['in_service']].values),
+            'bus': deepcopy(bus_data.values.astype(float)),
         }}
 
         for season in self.load_factors.columns:
@@ -89,9 +91,14 @@ class PowerFlowSimulator:
                 self.reset_and_apply_loads(time_step, season)
                 try:
                     pp.runpp(self.net, verbose=True, numba=False)
+                    load_data = self.net.load[['bus','p_mw','q_mvar']]
+                    # Add entry to account for slack bus to match dimensions in GAT Trainning
+                    slack_bus_load = pd.DataFrame([[0, 0, 0]], columns=['bus', 'p_mw', 'q_mvar'])
+                    load_data = pd.concat([slack_bus_load,load_data], ignore_index=True)
                     lfa_results = {
                         'res_bus': deepcopy(self.net.res_bus.values),
-                        'res_line': deepcopy(self.net.res_line.values),
+                        'load': deepcopy(load_data.values.astype(float)),
+                        'res_line': deepcopy(self.net.res_line[self.net.line['in_service']].values)
                     }
                     time_step_results[time_step] = lfa_results
                 except pp.LoadflowNotConverged:
@@ -119,6 +126,7 @@ class PowerFlowSimulator:
         nx.draw_networkx(graph, pos, with_labels=True, node_color='black', node_size=300, font_color='white')
         plt.title(f'Power Network Topology - Configuration {config_number}')
         plt.savefig(f'plots/Network_{config_number}', dpi=300)
+        # plt.show()
 
     def save_results(self):
         with h5py.File('data/network_results.h5', 'w') as f:
@@ -127,6 +135,7 @@ class PowerFlowSimulator:
                 static_group = net_group.create_group('network_config')
                 static_group.create_dataset('line', data=net_data['network_config']['line'])
                 static_group.create_dataset('bus', data=net_data['network_config']['bus'])
+                # static_group.create_dataset('load', data=net_data['network_config']['load'])
                 
                 for season, time_step_data in net_data.items():
                     if season == 'network_config':
@@ -136,6 +145,7 @@ class PowerFlowSimulator:
                         time_step_group = season_group.create_group(f'time_step_{time_step}')
                         time_step_group.create_dataset('res_bus', data=results['res_bus'])
                         time_step_group.create_dataset('res_line', data=results['res_line'])
+                        time_step_group.create_dataset('load', data=results['load'])
 
 if __name__ == '__main__':
     network = nw.case33bw()

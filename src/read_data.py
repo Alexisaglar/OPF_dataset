@@ -8,7 +8,8 @@ def read_results(network_id, season, time_step):
         }
         dynamic_data = {
             'res_bus': f[f'network_{network_id}/season_{season}/time_step_{time_step}/res_bus'][:],
-            'res_line': f[f'network_{network_id}/season_{season}/time_step_{time_step}/res_line'][:]
+            'res_line': f[f'network_{network_id}/season_{season}/time_step_{time_step}/res_line'][:],
+            'load': f[f'network_{network_id}/season_{season}/time_step_{time_step}/load'][:]
         }
         return static_data, dynamic_data
 
