@@ -1,13 +1,13 @@
 
 # OPF_dataset
 
-This repository provides datasets for Optimal Power Flow (OPF) problems, facilitating research and development in power systems analysis and optimization.
+This repository provides tools and datasets for generating Optimal Power Flow (OPF) data, facilitating research and development in power systems analysis and optimization.
 
 ## Contents
 
-- **Data Files**: Datasets in formats suitable for various OPF studies.
-- **Scripts**: Tools for data processing, analysis, and visualization.
-- **Documentation**: Guidelines on dataset usage and script functionalities.
+- **`src/`**: Contains the primary script for dataset generation.
+- **`.gitignore`**: Specifies files and directories for Git to ignore.
+- **`README.md`**: Provides an overview and instructions for the repository.
 
 ## Getting Started
 
@@ -21,10 +21,15 @@ This repository provides datasets for Optimal Power Flow (OPF) problems, facilit
    cd OPF_dataset
    ```
 
-3. **Explore the Data and Scripts**: Review the available datasets and utilize the provided scripts for your research needs.
+3. **Install Dependencies**: Ensure you have the necessary dependencies installed.
+
+4. **Run the Dataset Generation Script**:
+   ```bash
+   python src/dataset_generation.py
+   ```
 
 ## Usage
 
-- **Data Analysis**: Use the scripts to process and analyze the OPF datasets.
-- **Visualization**: Generate visual representations of the data to aid in understanding and presentation.
-- **Customization**: Modify the scripts to tailor them to specific research requirements.
+- **Data Generation**: Utilize the `dataset_generation.py` script to create OPF datasets tailored to your research needs.
+- **Customization**: Modify the script parameters to adjust the dataset characteristics, such as network size, load profiles, and generation capacities.
+
